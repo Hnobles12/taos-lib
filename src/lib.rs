@@ -10,9 +10,9 @@
 //     }
 // }
 
-// pub mod system;
-// pub mod Messages;
-// pub mod Commands;
+pub mod System;
+pub mod Messages;
+pub mod Commands;
 
 // use crate::system;
 // use crate::Messages;
