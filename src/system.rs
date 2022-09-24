@@ -1,3 +1,5 @@
+pub mod system {
+
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
@@ -43,4 +45,6 @@ impl State {
         // }
         self.mode
     }
+}
+
 }
