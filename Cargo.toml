@@ -11,3 +11,6 @@ ndarray = { version = "0.15.6", features = ["serde"] }
 serde = { version = "1.0.145", features = ["derive"] }
 serde_json = "1.0.85"
 pca9685 = "0.1.0"
+mpu9250 = { version = "0.24.1", features = ["i2c"] }
+linux-embedded-hal = "0.3.2"
+

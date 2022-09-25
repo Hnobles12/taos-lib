@@ -1,4 +1,9 @@
 use serde::{Serialize, Deserialize};
+
+use linux_embedded_hal as hal;
+use hal::Delay;
+use hal::I2cdev;
+use mpu9250::{Mpu9250, ImuMeasurements, MargMeasurements};
 // use pca9685;
 
 // #[derive(Serialize, Deserialize)]
@@ -21,6 +26,9 @@ pub struct FCS {
 
     // Flight Control Hardware Controller
     pub fc_hardware: FCSHardware,
+
+    // Telemetry Hardware Controller
+    pub telem_hardware: TelemetryHardware,
 
 }
 
@@ -45,7 +53,10 @@ impl Default for FCS {
             l_aileron_d_bound: [-25.0,25.0],
 
             // Flight Control Hardware Controller
-            fc_hardware: FCSHardware::default()
+            fc_hardware: FCSHardware::default(),
+
+            // Telemetry Hardware
+            telem_hardware: TelemetryHardware::default(),
 
         }
     }
@@ -161,6 +172,10 @@ impl FCS {
 
         // }
         // self.rudder_d_bound = bound;
+    }
+
+    pub fn get_telemetry(&mut self)->Telemetry{
+        self.telem_hardware.get_telemetry()
     }
 }
 
@@ -365,5 +380,54 @@ impl FCSHardware {
 
     pub fn shutdown(&mut self){
         self.pca.set_all_duty_cycle(0);
+    }
+}
+
+#[derive(Debug)]
+pub struct Telemetry {
+    pub accel: [f32;3],
+    pub gyro: [f32;3],
+    pub mag: [f32;3],
+    pub temp:f32,
+    // pub heading: f32,
+}
+
+
+pub struct TelemetryHardware {
+    pub mpu9265: Mpu9250<mpu9250::I2cDevice<linux_embedded_hal::I2cdev>, mpu9250::Marg >,
+    pub accelerometer_bias: [f32; 3],
+
+}
+
+impl Default for TelemetryHardware {
+    fn default() -> TelemetryHardware {
+        let i2c_device = I2cdev::new("/dev/i2c-1").unwrap();
+        TelemetryHardware {
+            mpu9265: Mpu9250::marg_default(i2c_device, &mut Delay).unwrap(),
+            accelerometer_bias: [0.0,0.0,0.0]
+        }
+    }
+}
+
+impl TelemetryHardware {
+    pub fn calibrate_at_rest(&mut self) {
+        let bias: [f32;3] = self.mpu9265.calibrate_at_rest(&mut Delay).unwrap();
+        self.accelerometer_bias = bias;
+    }
+
+    pub fn get_telemetry(&mut self) -> Telemetry {
+        let all: MargMeasurements<[f32;3]> = self.mpu9265.all().unwrap();
+        let mut accel: [f32;3] = all.accel;
+
+        accel[0] = accel[0] - self.accelerometer_bias[0];
+        accel[1] = accel[1] - self.accelerometer_bias[1];
+        accel[2] = accel[2] - self.accelerometer_bias[2];
+
+        Telemetry {
+            accel: accel,
+            gyro: all.gyro,
+            mag: all.mag,
+            temp: all.temp
+        }
     }
 }
