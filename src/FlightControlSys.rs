@@ -5,19 +5,19 @@ use serde::{Serialize, Deserialize};
 pub struct FCS {
     // Powerplant Settings
     master_safe: bool,
-    throttle: f64,
+    throttle: f32,
 
     // Control Surface Deflection Settings
-    elevator_d: f64,
-    rudder_d: f64,
-    r_aileron_d: f64,
-    l_aileron_d: f64,
+    elevator_d: f32,
+    rudder_d: f32,
+    r_aileron_d: f32,
+    l_aileron_d: f32,
 
     // Control Surface Deflection Bounds
-    elevator_d_bound: [f64;2],
-    rudder_d_bound: [f64;2],
-    r_aileron_d_bound: [f64;2],
-    l_aileron_d_bound: [f64;2],
+    elevator_d_bound: [f32;2],
+    rudder_d_bound: [f32;2],
+    r_aileron_d_bound: [f32;2],
+    l_aileron_d_bound: [f32;2],
 
     // Flight Control Hardware Controller
     fc_hardware: FCSHardware,
@@ -52,38 +52,32 @@ impl Default for FCS {
 }
 
 impl FCS {
-    pub fn new() -> Self {
 
-        FCS {
-            // Powerplant Settings
-            master_safe: true,
-            throttle: 0.0,
 
-            // Control Surface Deflection Settings
-            elevator_d: 0.0,
-            rudder_d: 0.0,
-            r_aileron_d: 0.0,
-            l_aileron_d: 0.0,
-
-            // Control Surface Deflection Bounds
-            elevator_d_bound: [-25.0,25.0],
-            rudder_d_bound: [-25.0,25.0],
-            r_aileron_d_bound: [-25.0,25.0],
-            l_aileron_d_bound: [-25.0,25.0],
-
+    pub fn update(&mut self) {
+        // TODO Implement sending to FCSHardware
+        self.fc_hardware.set_elevator_deflection(self.elevator_d);
+        self.fc_hardware.set_l_aileron_deflection(self.l_aileron_d);
+        self.fc_hardware.set_r_aileron_deflection(self.r_aileron_d);
+        self.fc_hardware.set_rudder_deflection(self.rudder_d);
+        
+        if !self.master_safe {
+            self.fc_hardware.set_throttle(self.throttle);
         }
-    }
+        else {
+            self.fc_hardware.set_throttle(0.0);
+        }
 
-    pub fn update_controls(&self) {
-        println!("Updating Controls: {:?}", self);
+        self.fc_hardware.update();
+
     }
 
     // Powerplant Control Settings
     pub fn set_master_safe(&mut self, setting: bool) {
-        self.master_safe = setting;        
+        self.master_safe = setting;   
     }
 
-    pub fn set_throttle(&mut self, setting: f64){
+    pub fn set_throttle(&mut self, setting: f32){
         if setting <= 0.0 {
             self.throttle = 0.0;
         }
@@ -97,7 +91,7 @@ impl FCS {
 
 
     // Control Surface Settings
-    pub fn set_elevator_deflection(&mut self, setting: f64){
+    pub fn set_elevator_deflection(&mut self, setting: f32){
         if setting <= self.elevator_d_bound[0] {
             self.elevator_d = self.elevator_d_bound[0];
         }
@@ -109,7 +103,7 @@ impl FCS {
         }
     }
 
-    pub fn set_rudder_deflection(&mut self, setting: f64){
+    pub fn set_rudder_deflection(&mut self, setting: f32){
         if setting <= self.rudder_d_bound[0] {
             self.rudder_d = self.rudder_d_bound[0];
         }
@@ -121,7 +115,7 @@ impl FCS {
         }
     }
 
-    pub fn set_r_aileron_deflection(&mut self, setting: f64){
+    pub fn set_r_aileron_deflection(&mut self, setting: f32){
         if setting <= self.r_aileron_d_bound[0] {
             self.r_aileron_d = self.r_aileron_d_bound[0];
         }
@@ -133,7 +127,7 @@ impl FCS {
         }
     }
 
-    pub fn set_l_aileron_deflection(&mut self, setting: f64){
+    pub fn set_l_aileron_deflection(&mut self, setting: f32){
         if setting <= self.l_aileron_d_bound[0] {
             self.l_aileron_d = self.l_aileron_d_bound[0];
         }
@@ -146,7 +140,7 @@ impl FCS {
     }
 
     // Control Surface Deflection Bounds
-    pub fn set_rudder_bound(&mut self, low:f64, high:f64){
+    pub fn set_rudder_bound(&mut self, low:f32, high:f32){
         // let mut bound = [-90.0,90.0];
 
         // if low <= -90.0 {
@@ -319,5 +313,46 @@ impl FCSHardware {
             rudder_servo: Servo{channel: 4, ..Default::default()},
             throttle_pwm: Motor{channel: 5, ..Default::default()},
         }
+    }
+
+    pub fn set_elevator_deflection(&mut self, angle:f32){
+        self.l_elevator_servo.set_pos(angle);
+        self.r_elevator_servo.set_pos(angle);
+    }
+
+    pub fn set_l_aileron_deflection(&mut self, angle:f32){
+        self.l_aileron_servo.set_pos(angle);
+    }
+
+    pub fn set_r_aileron_deflection(&mut self, angle: f32){
+        self.r_aileron_servo.set_pos(angle);
+    }
+
+    pub fn set_rudder_deflection(&mut self, angle:f32){
+        self.rudder_servo.set_pos(angle);
+    }
+
+    pub fn set_throttle(&mut self, throttle:f32){
+        self.throttle_pwm.set_throttle(throttle);
+    }
+
+    ///////////////// TODO: NEEDS ERROR HANDLING HERE!!!!! /////////////////////
+    pub fn update(&mut self){
+    ///////////////// TODO: NEEDS ERROR HANDLING HERE!!!!! /////////////////////
+        self.pca.set_pulse_length(self.l_elevator_servo.channel, self.l_elevator_servo.pos_pw).unwrap();
+        self.pca.set_pulse_length(self.r_elevator_servo.channel, self.r_elevator_servo.pos_pw).unwrap();
+
+        self.pca.set_pulse_length(self.l_aileron_servo.channel, self.l_aileron_servo.pos_pw).unwrap();
+        self.pca.set_pulse_length(self.r_aileron_servo.channel, self.r_aileron_servo.pos_pw).unwrap();
+
+        self.pca.set_pulse_length(self.rudder_servo.channel, self.rudder_servo.pos_pw).unwrap();
+
+        self.pca.set_pulse_length(self.throttle_pwm.channel, self.throttle_pwm.throttle_pw).unwrap();
+    }
+
+    ///////////////// TODO: NEEDS ERROR HANDLING HERE!!!!! /////////////////////
+    pub fn init(&mut self){
+    ///////////////// TODO: NEEDS ERROR HANDLING HERE!!!!! /////////////////////
+        self.pca.set_frequency(50).unwrap();
     }
 }
