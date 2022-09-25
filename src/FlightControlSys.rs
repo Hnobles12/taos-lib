@@ -4,23 +4,23 @@ use serde::{Serialize, Deserialize};
 // #[derive(Serialize, Deserialize)]
 pub struct FCS {
     // Powerplant Settings
-    master_safe: bool,
-    throttle: f32,
+    pub master_safe: bool,
+    pub throttle: f32,
 
     // Control Surface Deflection Settings
-    elevator_d: f32,
-    rudder_d: f32,
-    r_aileron_d: f32,
-    l_aileron_d: f32,
+    pub elevator_d: f32,
+    pub rudder_d: f32,
+    pub r_aileron_d: f32,
+    pub l_aileron_d: f32,
 
     // Control Surface Deflection Bounds
-    elevator_d_bound: [f32;2],
-    rudder_d_bound: [f32;2],
-    r_aileron_d_bound: [f32;2],
-    l_aileron_d_bound: [f32;2],
+    pub elevator_d_bound: [f32;2],
+    pub rudder_d_bound: [f32;2],
+    pub r_aileron_d_bound: [f32;2],
+    pub l_aileron_d_bound: [f32;2],
 
     // Flight Control Hardware Controller
-    fc_hardware: FCSHardware,
+    pub fc_hardware: FCSHardware,
 
 }
 
@@ -52,6 +52,14 @@ impl Default for FCS {
 }
 
 impl FCS {
+
+    pub fn init_hardware(&mut self){
+        self.fc_hardware.init();
+    }
+
+    pub fn shutdown_hardware(&mut self){
+        self.fc_hardware.shutdown();
+    }
 
 
     pub fn update(&mut self) {
@@ -158,13 +166,13 @@ impl FCS {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Servo {
-    channel: u8,
-    min_pw:f32,
-    max_pw:f32,
-    pos: f32,
-    pos_pw: f32,
-    pos_offset: f32,
-    inverted: bool
+    pub channel: u8,
+    pub min_pw:f32,
+    pub max_pw:f32,
+    pub pos: f32,
+    pub pos_pw: f32,
+    pub pos_offset: f32,
+    pub inverted: bool
 
 }
 impl Default for Servo {
@@ -189,19 +197,18 @@ impl Servo {
     }
 
     pub fn set_pos(&mut self, angle:f32) {
-        let new_pos = self.deg2pw(angle);
 
-        if new_pos >= 90.0 {
+        if angle >= 90.0 {
             self.pos = 90.0;
             self.pos_pw = self.deg2pw(90.0);
         }
-        else if new_pos <= -90.0 {
+        else if angle <= -90.0 {
             self.pos = -90.0;
             self.pos_pw = self.deg2pw(-90.0);
         }
         else {
-            self.pos = new_pos;
-            self.pos_pw = self.deg2pw(new_pos);
+            self.pos = angle;
+            self.pos_pw = self.deg2pw(angle);
         }
     }
 
@@ -226,13 +233,13 @@ impl Servo {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Motor {
-    channel: u8,
-    min_pw:f32,
-    max_pw:f32,
-    throttle: f32,
-    throttle_pw: f32,
-    throttle_offset: f32,
-    inverted: bool
+    pub channel: u8,
+    pub min_pw:f32,
+    pub max_pw:f32,
+    pub throttle: f32,
+    pub throttle_pw: f32,
+    pub throttle_offset: f32,
+    pub inverted: bool
 
 }
 
@@ -257,19 +264,19 @@ impl Motor {
     }
 
     pub fn set_throttle(&mut self, setting:f32) {
-        let new_throttle = self.throttle2pw(setting);
+        // let new_throttle_pw = self.throttle2pw(setting);
 
-        if new_throttle >= 100.0 {
+        if setting >= 100.0 {
             self.throttle = 100.0;
             self.throttle_pw = self.throttle2pw(100.0);
         }
-        else if new_throttle <= 0.0 {
+        else if setting <= 0.0 {
             self.throttle = 0.0;
             self.throttle_pw = self.throttle2pw(0.0);
         }
         else {
-            self.throttle = new_throttle;
-            self.throttle_pw = self.throttle2pw(new_throttle);
+            self.throttle = setting;
+            self.throttle_pw = self.throttle2pw(setting);
         }
     }
 
@@ -292,13 +299,13 @@ impl Motor {
 
 // #[derive(Debug)]
 pub struct FCSHardware {
-    pca: pca9685::PCA9685,
-    l_elevator_servo: Servo,
-    r_elevator_servo: Servo,
-    l_aileron_servo: Servo,
-    r_aileron_servo: Servo,
-    rudder_servo: Servo,
-    throttle_pwm: Motor,
+    pub pca: pca9685::PCA9685,
+    pub l_elevator_servo: Servo,
+    pub r_elevator_servo: Servo,
+    pub l_aileron_servo: Servo,
+    pub r_aileron_servo: Servo,
+    pub rudder_servo: Servo,
+    pub throttle_pwm: Motor,
 }
 
 impl FCSHardware {
@@ -339,20 +346,24 @@ impl FCSHardware {
     ///////////////// TODO: NEEDS ERROR HANDLING HERE!!!!! /////////////////////
     pub fn update(&mut self){
     ///////////////// TODO: NEEDS ERROR HANDLING HERE!!!!! /////////////////////
-        self.pca.set_pulse_length(self.l_elevator_servo.channel, self.l_elevator_servo.pos_pw).unwrap();
-        self.pca.set_pulse_length(self.r_elevator_servo.channel, self.r_elevator_servo.pos_pw).unwrap();
+        self.pca.set_pulse_length(self.l_elevator_servo.channel, self.l_elevator_servo.pos_pw);
+        self.pca.set_pulse_length(self.r_elevator_servo.channel, self.r_elevator_servo.pos_pw);
 
-        self.pca.set_pulse_length(self.l_aileron_servo.channel, self.l_aileron_servo.pos_pw).unwrap();
-        self.pca.set_pulse_length(self.r_aileron_servo.channel, self.r_aileron_servo.pos_pw).unwrap();
+        self.pca.set_pulse_length(self.l_aileron_servo.channel, self.l_aileron_servo.pos_pw);
+        self.pca.set_pulse_length(self.r_aileron_servo.channel, self.r_aileron_servo.pos_pw);
 
-        self.pca.set_pulse_length(self.rudder_servo.channel, self.rudder_servo.pos_pw).unwrap();
+        self.pca.set_pulse_length(self.rudder_servo.channel, self.rudder_servo.pos_pw);
 
-        self.pca.set_pulse_length(self.throttle_pwm.channel, self.throttle_pwm.throttle_pw).unwrap();
+        self.pca.set_pulse_length(self.throttle_pwm.channel, self.throttle_pwm.throttle_pw);
     }
 
     ///////////////// TODO: NEEDS ERROR HANDLING HERE!!!!! /////////////////////
     pub fn init(&mut self){
     ///////////////// TODO: NEEDS ERROR HANDLING HERE!!!!! /////////////////////
-        self.pca.set_frequency(50).unwrap();
+        self.pca.set_frequency(50);
+    }
+
+    pub fn shutdown(&mut self){
+        self.pca.set_all_duty_cycle(0);
     }
 }
